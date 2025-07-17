@@ -537,10 +537,10 @@ model_token_limits = {
 }
 
 st.set_page_config(
-    page_title="STRIDE GPT",
-    page_icon=":shield:",
+    page_title="SecArc",
+    page_icon="",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # Define callback for model provider change
@@ -607,268 +607,268 @@ def on_model_selection_change():
 
 # ------------------ Sidebar ------------------ #
 
-st.sidebar.image("logo.png")
+# st.sidebar.image("logo.png")
 
-# Add instructions on how to use the app to the sidebar
-st.sidebar.header("How to use STRIDE GPT")
+# # Add instructions on how to use the app to the sidebar
+# st.sidebar.header("How to use STRIDE GPT")
 
 with st.sidebar:
-    # Add model selection input field to the sidebar
-    model_provider = st.selectbox(
-        "Select your preferred model provider:",
-        ["OpenAI API", "Anthropic API", "Azure OpenAI Service", "Google AI API", "Mistral API", "Groq API", "Ollama", "LM Studio Server"],
-        key="model_provider",
-        on_change=on_model_provider_change,
-        help="Select the model provider you would like to use. This will determine the models available for selection.",
-    )
+#     # Add model selection input field to the sidebar
+#     model_provider = st.selectbox(
+#         "Select your preferred model provider:",
+#         ["OpenAI API", "Anthropic API", "Azure OpenAI Service", "Google AI API", "Mistral API", "Groq API", "Ollama", "LM Studio Server"],
+#         key="model_provider",
+#         on_change=on_model_provider_change,
+#         help="Select the model provider you would like to use. This will determine the models available for selection.",
+#     )
 
-    if model_provider == "OpenAI API":
-        st.markdown(
-        """
-    1. Enter your [OpenAI API key](https://platform.openai.com/account/api-keys) and chosen model below 🔑
-    2. Provide details of the application that you would like to threat model  📝
-    3. Generate a threat list, attack tree and/or mitigating controls for your application 🚀
-    """
-    )
-        # Add OpenAI API key input field to the sidebar
-        openai_api_key = st.text_input(
-            "Enter your OpenAI API key:",
-            value=st.session_state.get('openai_api_key', ''),
-            type="password",
-            help="You can find your OpenAI API key on the [OpenAI dashboard](https://platform.openai.com/account/api-keys).",
-        )
-        if openai_api_key:
-            st.session_state['openai_api_key'] = openai_api_key
+#     if model_provider == "OpenAI API":
+#         st.markdown(
+#         """
+#     1. Enter your [OpenAI API key](https://platform.openai.com/account/api-keys) and chosen model below 🔑
+#     2. Provide details of the application that you would like to threat model  📝
+#     3. Generate a threat list, attack tree and/or mitigating controls for your application 🚀
+#     """
+#     )
+#         # Add OpenAI API key input field to the sidebar
+#         openai_api_key = st.text_input(
+#             "Enter your OpenAI API key:",
+#             value=st.session_state.get('openai_api_key', ''),
+#             type="password",
+#             help="You can find your OpenAI API key on the [OpenAI dashboard](https://platform.openai.com/account/api-keys).",
+#         )
+#         if openai_api_key:
+#             st.session_state['openai_api_key'] = openai_api_key
 
-        # Add model selection input field to the sidebar
-        selected_model = st.selectbox(
-            "Select the model you would like to use:",
-            ["gpt-4.5-preview", "gpt-4.1", "gpt-4o", "gpt-4o-mini", "o1", "o3", "o3-mini", "o4-mini"],
-            key="selected_model",
-            on_change=on_model_selection_change,
-            help="GPT-4.1 is OpenAI's most advanced model with 1M token context. o1, o3, o3-mini, and o4-mini are reasoning models that perform complex reasoning before responding. o3 and o4-mini are newer models with superior reasoning capabilities and 200K token contexts."
-        )
+#         # Add model selection input field to the sidebar
+#         selected_model = st.selectbox(
+#             "Select the model you would like to use:",
+#             ["gpt-4.5-preview", "gpt-4.1", "gpt-4o", "gpt-4o-mini", "o1", "o3", "o3-mini", "o4-mini"],
+#             key="selected_model",
+#             on_change=on_model_selection_change,
+#             help="GPT-4.1 is OpenAI's most advanced model with 1M token context. o1, o3, o3-mini, and o4-mini are reasoning models that perform complex reasoning before responding. o3 and o4-mini are newer models with superior reasoning capabilities and 200K token contexts."
+#         )
 
-    if model_provider == "Anthropic API":
-        st.markdown(
-        """
-    1. Enter your [Anthropic API key](https://console.anthropic.com/settings/keys) and chosen model below 🔑
-    2. Provide details of the application that you would like to threat model  📝
-    3. Generate a threat list, attack tree and/or mitigating controls for your application 🚀
-    """
-    )
-        # Add Anthropic API key input field to the sidebar
-        anthropic_api_key = st.text_input(
-            "Enter your Anthropic API key:",
-            value=st.session_state.get('anthropic_api_key', ''),
-            type="password",
-            help="You can find your Anthropic API key on the [Anthropic console](https://console.anthropic.com/settings/keys).",
-        )
-        if anthropic_api_key:
-            st.session_state['anthropic_api_key'] = anthropic_api_key
+#     if model_provider == "Anthropic API":
+#         st.markdown(
+#         """
+#     1. Enter your [Anthropic API key](https://console.anthropic.com/settings/keys) and chosen model below 🔑
+#     2. Provide details of the application that you would like to threat model  📝
+#     3. Generate a threat list, attack tree and/or mitigating controls for your application 🚀
+#     """
+#     )
+#         # Add Anthropic API key input field to the sidebar
+#         anthropic_api_key = st.text_input(
+#             "Enter your Anthropic API key:",
+#             value=st.session_state.get('anthropic_api_key', ''),
+#             type="password",
+#             help="You can find your Anthropic API key on the [Anthropic console](https://console.anthropic.com/settings/keys).",
+#         )
+#         if anthropic_api_key:
+#             st.session_state['anthropic_api_key'] = anthropic_api_key
 
-        # Add model selection input field to the sidebar
-        anthropic_model = st.selectbox(
-            "Select the model you would like to use:",
-            ["claude-opus-4-20250514", "claude-sonnet-4-20250514", "claude-3-7-sonnet-latest", "claude-3-5-haiku-latest"],
-            index=1,  # Make claude-sonnet-4-20250514 the default
-            key="selected_model",
-            on_change=on_model_selection_change,
-            help="Claude 4 models are the latest generation with enhanced capabilities. Claude Sonnet 4 offers the best balance of performance and efficiency."
-        )
+#         # Add model selection input field to the sidebar
+#         anthropic_model = st.selectbox(
+#             "Select the model you would like to use:",
+#             ["claude-opus-4-20250514", "claude-sonnet-4-20250514", "claude-3-7-sonnet-latest", "claude-3-5-haiku-latest"],
+#             index=1,  # Make claude-sonnet-4-20250514 the default
+#             key="selected_model",
+#             on_change=on_model_selection_change,
+#             help="Claude 4 models are the latest generation with enhanced capabilities. Claude Sonnet 4 offers the best balance of performance and efficiency."
+#         )
 
-    if model_provider == "Azure OpenAI Service":
-        st.markdown(
-        """
-    1. Enter your Azure OpenAI API key, endpoint and deployment name below 🔑
-    2. Provide details of the application that you would like to threat model  📝
-    3. Generate a threat list, attack tree and/or mitigating controls for your application 🚀
-    """
-    )
+#     if model_provider == "Azure OpenAI Service":
+#         st.markdown(
+#         """
+#     1. Enter your Azure OpenAI API key, endpoint and deployment name below 🔑
+#     2. Provide details of the application that you would like to threat model  📝
+#     3. Generate a threat list, attack tree and/or mitigating controls for your application 🚀
+#     """
+#     )
 
-        # Add Azure OpenAI API key input field to the sidebar
-        azure_api_key = st.text_input(
-            "Azure OpenAI API key:",
-            value=st.session_state.get('azure_api_key', ''),
-            type="password",
-            help="You can find your Azure OpenAI API key on the [Azure portal](https://portal.azure.com/).",
-        )
-        if azure_api_key:
-            st.session_state['azure_api_key'] = azure_api_key
+#         # Add Azure OpenAI API key input field to the sidebar
+#         azure_api_key = st.text_input(
+#             "Azure OpenAI API key:",
+#             value=st.session_state.get('azure_api_key', ''),
+#             type="password",
+#             help="You can find your Azure OpenAI API key on the [Azure portal](https://portal.azure.com/).",
+#         )
+#         if azure_api_key:
+#             st.session_state['azure_api_key'] = azure_api_key
         
-        # Add Azure OpenAI endpoint input field to the sidebar
-        azure_api_endpoint = st.text_input(
-            "Azure OpenAI endpoint:",
-            value=st.session_state.get('azure_api_endpoint', ''),
-            help="Example endpoint: https://YOUR_RESOURCE_NAME.openai.azure.com/",
-        )
-        if azure_api_endpoint:
-            st.session_state['azure_api_endpoint'] = azure_api_endpoint
+#         # Add Azure OpenAI endpoint input field to the sidebar
+#         azure_api_endpoint = st.text_input(
+#             "Azure OpenAI endpoint:",
+#             value=st.session_state.get('azure_api_endpoint', ''),
+#             help="Example endpoint: https://YOUR_RESOURCE_NAME.openai.azure.com/",
+#         )
+#         if azure_api_endpoint:
+#             st.session_state['azure_api_endpoint'] = azure_api_endpoint
 
-        # Add Azure OpenAI deployment name input field to the sidebar
-        azure_deployment_name = st.text_input(
-            "Deployment name:",
-            value=st.session_state.get('azure_deployment_name', ''),
-        )
-        if azure_deployment_name:
-            st.session_state['azure_deployment_name'] = azure_deployment_name
+#         # Add Azure OpenAI deployment name input field to the sidebar
+#         azure_deployment_name = st.text_input(
+#             "Deployment name:",
+#             value=st.session_state.get('azure_deployment_name', ''),
+#         )
+#         if azure_deployment_name:
+#             st.session_state['azure_deployment_name'] = azure_deployment_name
         
-        st.info("Please note that you must use an 1106-preview model deployment.")
+#         st.info("Please note that you must use an 1106-preview model deployment.")
 
-        azure_api_version = '2023-12-01-preview' # Update this as needed
+#         azure_api_version = '2023-12-01-preview' # Update this as needed
 
-        st.write(f"Azure API Version: {azure_api_version}")
+#         st.write(f"Azure API Version: {azure_api_version}")
 
-    if model_provider == "Google AI API":
-        st.markdown(
-        """
-    1. Enter your [Google AI API key](https://makersuite.google.com/app/apikey) and chosen model below 🔑
-    2. Provide details of the application that you would like to threat model  📝
-    3. Generate a threat list, attack tree and/or mitigating controls for your application 🚀
-    """
-    )
-        # Add Google API key input field to the sidebar
-        google_api_key = st.text_input(
-            "Enter your Google AI API key:",
-            value=st.session_state.get('google_api_key', ''),
-            type="password",
-            help="You can generate a Google AI API key in the [Google AI Studio](https://makersuite.google.com/app/apikey).",
-        )
-        if google_api_key:
-            st.session_state['google_api_key'] = google_api_key
+#     if model_provider == "Google AI API":
+#         st.markdown(
+#         """
+#     1. Enter your [Google AI API key](https://makersuite.google.com/app/apikey) and chosen model below 🔑
+#     2. Provide details of the application that you would like to threat model  📝
+#     3. Generate a threat list, attack tree and/or mitigating controls for your application 🚀
+#     """
+#     )
+#         # Add Google API key input field to the sidebar
+#         google_api_key = st.text_input(
+#             "Enter your Google AI API key:",
+#             value=st.session_state.get('google_api_key', ''),
+#             type="password",
+#             help="You can generate a Google AI API key in the [Google AI Studio](https://makersuite.google.com/app/apikey).",
+#         )
+#         if google_api_key:
+#             st.session_state['google_api_key'] = google_api_key
 
-        # Add model selection input field to the sidebar
-        google_model = st.selectbox(
-            "Select the model you would like to use:",
-            ["gemini-2.5-pro-preview-05-06", "gemini-2.5-flash-preview-05-20", "gemini-2.0-flash", "gemini-2.0-flash-lite"],
-            key="selected_model",
-            on_change=on_model_selection_change,
-            help="Gemini 2.5 Pro/Flash are Google's latest preview models with 1M token context and enhanced thinking capabilities that show model reasoning. Gemini 2.0 Flash is a capable model, while Gemini 2.0 Flash Lite is more cost-effective."
-        )
+#         # Add model selection input field to the sidebar
+#         google_model = st.selectbox(
+#             "Select the model you would like to use:",
+#             ["gemini-2.5-pro-preview-05-06", "gemini-2.5-flash-preview-05-20", "gemini-2.0-flash", "gemini-2.0-flash-lite"],
+#             key="selected_model",
+#             on_change=on_model_selection_change,
+#             help="Gemini 2.5 Pro/Flash are Google's latest preview models with 1M token context and enhanced thinking capabilities that show model reasoning. Gemini 2.0 Flash is a capable model, while Gemini 2.0 Flash Lite is more cost-effective."
+#         )
 
-    if model_provider == "Mistral API":
-        st.markdown(
-        """
-    1. Enter your [Mistral API key](https://console.mistral.ai/api-keys/) and chosen model below 🔑
-    2. Provide details of the application that you would like to threat model  📝
-    3. Generate a threat list, attack tree and/or mitigating controls for your application 🚀
-    """
-    )
-        # Add Mistral API key input field to the sidebar
-        mistral_api_key = st.text_input(
-            "Enter your Mistral API key:",
-            value=st.session_state.get('mistral_api_key', ''),
-            type="password",
-            help="You can generate a Mistral API key in the [Mistral console](https://console.mistral.ai/api-keys/).",
-        )
-        if mistral_api_key:
-            st.session_state['mistral_api_key'] = mistral_api_key
+#     if model_provider == "Mistral API":
+#         st.markdown(
+#         """
+#     1. Enter your [Mistral API key](https://console.mistral.ai/api-keys/) and chosen model below 🔑
+#     2. Provide details of the application that you would like to threat model  📝
+#     3. Generate a threat list, attack tree and/or mitigating controls for your application 🚀
+#     """
+#     )
+#         # Add Mistral API key input field to the sidebar
+#         mistral_api_key = st.text_input(
+#             "Enter your Mistral API key:",
+#             value=st.session_state.get('mistral_api_key', ''),
+#             type="password",
+#             help="You can generate a Mistral API key in the [Mistral console](https://console.mistral.ai/api-keys/).",
+#         )
+#         if mistral_api_key:
+#             st.session_state['mistral_api_key'] = mistral_api_key
 
-        # Add model selection input field to the sidebar
-        mistral_model = st.selectbox(
-            "Select the model you would like to use:",
-            ["mistral-large-latest", "mistral-small-latest"],
-            key="selected_model",
-            on_change=on_model_selection_change,
-            help="Mistral Large is the most capable model, while Mistral Small is more cost-effective."
-        )
+#         # Add model selection input field to the sidebar
+#         mistral_model = st.selectbox(
+#             "Select the model you would like to use:",
+#             ["mistral-large-latest", "mistral-small-latest"],
+#             key="selected_model",
+#             on_change=on_model_selection_change,
+#             help="Mistral Large is the most capable model, while Mistral Small is more cost-effective."
+#         )
 
-    if model_provider == "Ollama":
-        st.markdown(
-        """
-    1. Configure your Ollama endpoint below (defaults to http://localhost:11434) 🔧
-    2. Provide details of the application that you would like to threat model 📝
-    3. Generate a threat list, attack tree and/or mitigating controls for your application 🚀
-    """
-    )
-        # Add Ollama endpoint configuration field
-        ollama_endpoint = st.text_input(
-            "Enter your Ollama endpoint:",
-            value=st.session_state.get('ollama_endpoint', 'http://localhost:11434'),
-            help="The URL of your Ollama instance. Default is http://localhost:11434 for local installations.",
-        )
-        if ollama_endpoint:
-            # Basic URL validation
-            if not ollama_endpoint.startswith(('http://', 'https://')):
-                st.error("Endpoint URL must start with http:// or https://")
-            else:
-                st.session_state['ollama_endpoint'] = ollama_endpoint
-                # Fetch available models from Ollama
-                available_models = get_ollama_models(ollama_endpoint)
+#     if model_provider == "Ollama":
+#         st.markdown(
+#         """
+#     1. Configure your Ollama endpoint below (defaults to http://localhost:11434) 🔧
+#     2. Provide details of the application that you would like to threat model 📝
+#     3. Generate a threat list, attack tree and/or mitigating controls for your application 🚀
+#     """
+#     )
+#         # Add Ollama endpoint configuration field
+#         ollama_endpoint = st.text_input(
+#             "Enter your Ollama endpoint:",
+#             value=st.session_state.get('ollama_endpoint', 'http://localhost:11434'),
+#             help="The URL of your Ollama instance. Default is http://localhost:11434 for local installations.",
+#         )
+#         if ollama_endpoint:
+#             # Basic URL validation
+#             if not ollama_endpoint.startswith(('http://', 'https://')):
+#                 st.error("Endpoint URL must start with http:// or https://")
+#             else:
+#                 st.session_state['ollama_endpoint'] = ollama_endpoint
+#                 # Fetch available models from Ollama
+#                 available_models = get_ollama_models(ollama_endpoint)
 
-        # Add model selection input field
-        selected_model = st.selectbox(
-            "Select the model you would like to use:",
-            available_models if ollama_endpoint and ollama_endpoint.startswith(('http://', 'https://')) else ["local-model"],
-            key="selected_model",
-            on_change=on_model_selection_change,
-            help="Select a model from your local Ollama instance. If you don't see any models, make sure Ollama is running and has models installed."
-        )
+#         # Add model selection input field
+#         selected_model = st.selectbox(
+#             "Select the model you would like to use:",
+#             available_models if ollama_endpoint and ollama_endpoint.startswith(('http://', 'https://')) else ["local-model"],
+#             key="selected_model",
+#             on_change=on_model_selection_change,
+#             help="Select a model from your local Ollama instance. If you don't see any models, make sure Ollama is running and has models installed."
+#         )
 
-    if model_provider == "LM Studio Server":
-        st.markdown(
-        """
-    1. Configure your LM Studio Server endpoint below (defaults to http://localhost:1234) 🔧
-    2. Provide details of the application that you would like to threat model 📝
-    3. Generate a threat list, attack tree and/or mitigating controls for your application 🚀
-    """
-    )
-        # Add LM Studio Server endpoint configuration field
-        lm_studio_endpoint = st.text_input(
-            "Enter your LM Studio Server endpoint:",
-            value=st.session_state.get('lm_studio_endpoint', 'http://localhost:1234'),
-            help="The URL of your LM Studio Server instance. Default is http://localhost:1234 for local installations.",
-        )
-        if lm_studio_endpoint:
-            # Basic URL validation
-            if not lm_studio_endpoint.startswith(('http://', 'https://')):
-                st.error("Endpoint URL must start with http:// or https://")
-            else:
-                st.session_state['lm_studio_endpoint'] = lm_studio_endpoint
-                # Fetch available models from LM Studio Server
-                available_models = get_lm_studio_models(lm_studio_endpoint)
+#     if model_provider == "LM Studio Server":
+#         st.markdown(
+#         """
+#     1. Configure your LM Studio Server endpoint below (defaults to http://localhost:1234) 🔧
+#     2. Provide details of the application that you would like to threat model 📝
+#     3. Generate a threat list, attack tree and/or mitigating controls for your application 🚀
+#     """
+#     )
+#         # Add LM Studio Server endpoint configuration field
+#         lm_studio_endpoint = st.text_input(
+#             "Enter your LM Studio Server endpoint:",
+#             value=st.session_state.get('lm_studio_endpoint', 'http://localhost:1234'),
+#             help="The URL of your LM Studio Server instance. Default is http://localhost:1234 for local installations.",
+#         )
+#         if lm_studio_endpoint:
+#             # Basic URL validation
+#             if not lm_studio_endpoint.startswith(('http://', 'https://')):
+#                 st.error("Endpoint URL must start with http:// or https://")
+#             else:
+#                 st.session_state['lm_studio_endpoint'] = lm_studio_endpoint
+#                 # Fetch available models from LM Studio Server
+#                 available_models = get_lm_studio_models(lm_studio_endpoint)
 
-        # Add model selection input field
-        selected_model = st.selectbox(
-            "Select the model you would like to use:",
-            available_models if lm_studio_endpoint and lm_studio_endpoint.startswith(('http://', 'https://')) else ["local-model"],
-            key="selected_model",
-            on_change=on_model_selection_change,
-            help="Select a model from your local LM Studio Server. If you don't see any models, make sure LM Studio Server is running with models loaded."
-        )
+#         # Add model selection input field
+#         selected_model = st.selectbox(
+#             "Select the model you would like to use:",
+#             available_models if lm_studio_endpoint and lm_studio_endpoint.startswith(('http://', 'https://')) else ["local-model"],
+#             key="selected_model",
+#             on_change=on_model_selection_change,
+#             help="Select a model from your local LM Studio Server. If you don't see any models, make sure LM Studio Server is running with models loaded."
+#         )
 
-    if model_provider == "Groq API":
-        st.markdown(
-        """
-    1. Enter your [Groq API key](https://console.groq.com/keys) and chosen model below 🔑
-    2. Provide details of the application that you would like to threat model  📝
-    3. Generate a threat list, attack tree and/or mitigating controls for your application 🚀
-    """
-    )
-        # Add Groq API key input field to the sidebar
-        groq_api_key = st.text_input(
-            "Enter your Groq API key:",
-            value=st.session_state.get('groq_api_key', ''),
-            type="password",
-            help="You can find your Groq API key in the [Groq console](https://console.groq.com/keys).",
-        )
-        if groq_api_key:
-            st.session_state['groq_api_key'] = groq_api_key
+#     if model_provider == "Groq API":
+#         st.markdown(
+#         """
+#     1. Enter your [Groq API key](https://console.groq.com/keys) and chosen model below 🔑
+#     2. Provide details of the application that you would like to threat model  📝
+#     3. Generate a threat list, attack tree and/or mitigating controls for your application 🚀
+#     """
+#     )
+#         # Add Groq API key input field to the sidebar
+#         groq_api_key = st.text_input(
+#             "Enter your Groq API key:",
+#             value=st.session_state.get('groq_api_key', ''),
+#             type="password",
+#             help="You can find your Groq API key in the [Groq console](https://console.groq.com/keys).",
+#         )
+#         if groq_api_key:
+#             st.session_state['groq_api_key'] = groq_api_key
 
-        # Add model selection input field to the sidebar
-        groq_model = st.selectbox(
-            "Select the model you would like to use:",
-            [
-                "deepseek-r1-distill-llama-70b",
-                "llama-3.3-70b-versatile",
-                "llama-3.1-8b-instant",
-                "mixtral-8x7b-32768",
-                "gemma-9b-it"
-            ],
-            key="selected_model",
-            on_change=on_model_selection_change,
-            help="Select from Groq's supported models. The Llama 3.3 70B Versatile model is recommended for best results."
-        )
+#         # Add model selection input field to the sidebar
+#         groq_model = st.selectbox(
+#             "Select the model you would like to use:",
+#             [
+#                 "deepseek-r1-distill-llama-70b",
+#                 "llama-3.3-70b-versatile",
+#                 "llama-3.1-8b-instant",
+#                 "mixtral-8x7b-32768",
+#                 "gemma-9b-it"
+#             ],
+#             key="selected_model",
+#             on_change=on_model_selection_change,
+#             help="Select from Groq's supported models. The Llama 3.3 70B Versatile model is recommended for best results."
+#         )
 
     # Add GitHub API key input field to the sidebar
     github_api_key = st.text_input(
@@ -927,80 +927,19 @@ with st.sidebar:
         # Store the token limit in session state
         st.session_state['token_limit'] = token_limit
 
-    st.markdown("---")
-
-    # Add "About" section to the sidebar
-    st.header("About")
-    
-    st.markdown(
-        "Welcome to STRIDE GPT, an AI-powered tool designed to help teams produce better threat models for their applications."
-    )
-    st.markdown(
-        "Threat modelling is a key activity in the software development lifecycle, but is often overlooked or poorly executed. STRIDE GPT aims to help teams produce more comprehensive threat models by leveraging the power of Large Language Models (LLMs) to generate a threat list, attack tree and/or mitigating controls for an application based on the details provided."
-    )
-    st.markdown("Created by [Matt Adams](https://www.linkedin.com/in/matthewrwadams/).")
-    # Add "Star on GitHub" link to the sidebar
-    st.markdown(
-        "⭐ Star on GitHub: [![Star on GitHub](https://img.shields.io/github/stars/mrwadams/stride-gpt?style=social)](https://github.com/mrwadams/stride-gpt)"
-    )
-    st.markdown("""---""")
-
-
-# Add "Example Application Description" section to the sidebar
-st.sidebar.header("Example Application Description")
-
-with st.sidebar:
-    st.markdown(
-        "Below is an example application description that you can use to test STRIDE GPT:"
-    )
-    st.markdown(
-        "> A web application that allows users to create, store, and share personal notes. The application is built using the React frontend framework and a Node.js backend with a MongoDB database. Users can sign up for an account and log in using OAuth2 with Google or Facebook. The notes are encrypted at rest and are only accessible by the user who created them. The application also supports real-time collaboration on notes with other users."
-    )
-    st.markdown("""---""")
-
-# Add "FAQs" section to the sidebar
-st.sidebar.header("FAQs")
-
-with st.sidebar:
-    st.markdown(
-        """
-    ### **What is STRIDE?**
-    STRIDE is a threat modeling methodology that helps to identify and categorise potential security risks in software applications. It stands for **S**poofing, **T**ampering, **R**epudiation, **I**nformation Disclosure, **D**enial of Service, and **E**levation of Privilege.
-    """
-    )
-    st.markdown(
-        """
-    ### **How does STRIDE GPT work?**
-    When you enter an application description and other relevant details, the tool will use a GPT model to generate a threat model for your application. The model uses the application description and details to generate a list of potential threats and then categorises each threat according to the STRIDE methodology.
-    """
-    )
-    st.markdown(
-        """
-    ### **Do you store the application details provided?**
-    No, STRIDE GPT does not store your application description or other details. All entered data is deleted after you close the browser tab.
-    """
-    )
-    st.markdown(
-        """
-    ### **Why does it take so long to generate a threat model?**
-    If you are using a free OpenAI API key, it will take a while to generate a threat model. This is because the free API key has strict rate limits. To speed up the process, you can use a paid API key.
-    """
-    )
-    st.markdown(
-        """
-    ### **Are the threat models 100% accurate?**
-    No, the threat models are not 100% accurate. STRIDE GPT uses GPT Large Language Models (LLMs) to generate its output. The GPT models are powerful, but they sometimes makes mistakes and are prone to 'hallucinations' (generating irrelevant or inaccurate content). Please use the output only as a starting point for identifying and addressing potential security risks in your applications.
-    """
-    )
-    st.markdown(
-        """
-    ### **How can I improve the accuracy of the threat models?**
-    You can improve the accuracy of the threat models by providing a detailed description of the application and selecting the correct application type, authentication methods, and other relevant details. The more information you provide, the more accurate the threat models will be.
-    """
-    )
-
 
 # ------------------ Main App UI ------------------ #
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+google_api_key = os.getenv("GOOGLE_API_KEY")
+model_provider = "Google AI API"
+google_model = "gemini-2.5-flash-preview-05-20"
+
+if google_api_key:
+    st.session_state['google_api_key'] = google_api_key
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["Threat Model", "Attack Tree", "Mitigations", "DREAD", "Test Cases"])
 
