@@ -961,7 +961,8 @@ understanding possible vulnerabilities and attack vectors. Use this tab to gener
     with col1:
         supports_image = False
         # Get selected_model from session state
-        selected_model = st.session_state.get('selected_model', '')
+        # selected_model = st.session_state.get('selected_model', '')
+        selected_model = "gemini-2.5-flash-preview-05-20"
         
         if model_provider == "OpenAI API" and (selected_model.startswith("gpt-4") or selected_model == "o4-mini"):
             supports_image = True
