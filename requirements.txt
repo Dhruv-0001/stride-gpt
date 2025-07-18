@@ -4,6 +4,7 @@ mistralai>=1.0.0
 openai
 pyGithub
 streamlit>=1.40
+streamlit-option-menu
 python-dotenv
 groq
 tiktoken
