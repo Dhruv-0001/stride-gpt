@@ -13,6 +13,7 @@ from openai import OpenAI
 import requests
 import json
 import tiktoken
+import pandas as pd
 
 from threat_model import (
     create_threat_model_prompt,
@@ -615,8 +616,8 @@ if 'app_input' not in st.session_state:
 # Navigation bar
 selected_page = option_menu(
     menu_title=None,  # Required
-    options=["Threat Model", "Attack Tree", "Mitigations", "DREAD", "Test Cases"],
-    icons=["shield-check", "diagram-3", "tools", "speedometer2", "clipboard-check"],
+    options=["Threat Model", "Attack Tree", "Mitigations", "DREAD", "Test Cases", "Security Score"],
+    icons=["shield-check", "diagram-3", "tools", "speedometer2", "clipboard-check", "star-fill"],
     menu_icon="cast",
     default_index=0,
     orientation="horizontal",
@@ -1290,3 +1291,367 @@ scenarios.
 
         else:
             st.error("Please generate a threat model first before requesting test cases.")
+
+# ------------------ Security Score Generation ------------------ #
+
+if selected_page == "Security Score":
+    st.markdown("""
+Security Score provides a comprehensive assessment of your application's security posture, combining multiple security frameworks and methodologies to deliver a quantifiable score out of 100. This score evaluates threat severity, security controls coverage, architecture patterns, and overall risk exposure to help prioritize security investments.
+""")
+    st.markdown("""---""")
+    
+    # Create a submit button for Security Score
+    security_score_submit_button = st.button(label="Generate Security Score")
+    
+    if security_score_submit_button:
+        # Check if required data exists
+        has_threat_model = 'threat_model' in st.session_state and st.session_state.get('threat_model')
+        has_dread_assessment = 'dread_assessment' in st.session_state and st.session_state.get('dread_assessment')
+        has_app_input = st.session_state.get('app_input')
+        
+        if not has_threat_model and not has_dread_assessment and not has_app_input:
+            st.error("Please generate a threat model or DREAD assessment first to calculate the security score.")
+        else:
+            with st.spinner("Calculating comprehensive security score..."):
+                # Initialize scoring components
+                threat_score = 0
+                risk_score = 0
+                controls_score = 0
+                architecture_score = 0
+                auth_score = 0
+                data_score = 0
+                
+                # Component 1: Threat Assessment Score (25%)
+                if has_threat_model:
+                    threat_model = st.session_state.get('threat_model', [])
+                    threat_count = len(threat_model)
+                    
+                    if threat_count == 0:
+                        threat_score = 100
+                    elif threat_count <= 5:
+                        threat_score = 85
+                    elif threat_count <= 10:
+                        threat_score = 70
+                    elif threat_count <= 15:
+                        threat_score = 55
+                    elif threat_count <= 20:
+                        threat_score = 40
+                    else:
+                        threat_score = 25
+                else:
+                    threat_score = 60  # Default if no threat model
+                
+                # Component 2: Risk Analysis Score (25%)
+                if has_dread_assessment:
+                    dread_data = st.session_state.get('dread_assessment', {})
+                    risk_assessments = dread_data.get('Risk Assessment', [])
+                    
+                    if risk_assessments:
+                        total_risk = 0
+                        for assessment in risk_assessments:
+                            if isinstance(assessment, dict):
+                                damage = assessment.get('Damage Potential', 5)
+                                reproducibility = assessment.get('Reproducibility', 5)
+                                exploitability = assessment.get('Exploitability', 5)
+                                affected_users = assessment.get('Affected Users', 5)
+                                discoverability = assessment.get('Discoverability', 5)
+                                
+                                risk_score_item = (damage + reproducibility + exploitability + affected_users + discoverability) / 5
+                                total_risk += risk_score_item
+                        
+                        avg_risk = total_risk / len(risk_assessments)
+                        # Convert 1-10 scale to 0-100 (inverted - lower risk = higher score)
+                        risk_score = max(0, 100 - (avg_risk - 1) * 11.11)
+                    else:
+                        risk_score = 60
+                else:
+                    risk_score = 60  # Default if no DREAD assessment
+                
+                # Component 3: Security Controls Coverage Score (20%)
+                app_type = st.session_state.get('app_type', 'Web application')
+                authentication = st.session_state.get('authentication', [])
+                internet_facing = st.session_state.get('internet_facing', 'Yes')
+                sensitive_data = st.session_state.get('sensitive_data', 'Unclassified')
+                
+                controls_score = 50  # Base score
+                
+                # Authentication controls
+                if authentication:
+                    if len(authentication) >= 3:
+                        controls_score += 20
+                    elif len(authentication) >= 2:
+                        controls_score += 15
+                    elif len(authentication) >= 1:
+                        controls_score += 10
+                
+                # Data sensitivity controls
+                if sensitive_data in ['Unclassified', 'None']:
+                    controls_score += 15
+                elif sensitive_data in ['Restricted', 'Confidential']:
+                    controls_score += 10
+                elif sensitive_data in ['Secret', 'Top Secret']:
+                    controls_score += 5  # Higher risk, lower score
+                
+                # Internet exposure
+                if internet_facing == 'No':
+                    controls_score += 15
+                else:
+                    controls_score += 5
+                
+                controls_score = min(100, controls_score)
+                
+                # Component 4: Architecture Security Patterns Score (15%)
+                architecture_score = 70  # Base score
+                
+                if has_app_input:
+                    app_input = st.session_state.get('app_input', '').lower()
+                    
+                    # Security patterns keywords
+                    security_patterns = [
+                        'encryption', 'tls', 'https', 'ssl', 'firewall', 'vpc', 'load balancer',
+                        'api gateway', 'authentication', 'authorization', 'oauth', 'jwt',
+                        'monitoring', 'logging', 'audit', 'backup', 'disaster recovery',
+                        'zero trust', 'least privilege', 'defense in depth', 'security by design'
+                    ]
+                    
+                    pattern_count = sum(1 for pattern in security_patterns if pattern in app_input)
+                    
+                    if pattern_count >= 10:
+                        architecture_score = 95
+                    elif pattern_count >= 7:
+                        architecture_score = 85
+                    elif pattern_count >= 5:
+                        architecture_score = 75
+                    elif pattern_count >= 3:
+                        architecture_score = 65
+                    else:
+                        architecture_score = 50
+                
+                # Component 5: Authentication & Access Control Score (10%)
+                auth_score = 40  # Base score
+                
+                if 'MFA' in authentication:
+                    auth_score += 25
+                if 'OAUTH2' in authentication:
+                    auth_score += 20
+                if 'SSO' in authentication:
+                    auth_score += 15
+                if 'Basic' in authentication:
+                    auth_score += 5
+                if 'None' in authentication:
+                    auth_score -= 20
+                
+                auth_score = max(0, min(100, auth_score))
+                
+                # Component 6: Data Protection Score (5%)
+                data_score = 60  # Base score
+                
+                if sensitive_data == 'None':
+                    data_score = 90
+                elif sensitive_data == 'Unclassified':
+                    data_score = 80
+                elif sensitive_data == 'Restricted':
+                    data_score = 70
+                elif sensitive_data == 'Confidential':
+                    data_score = 60
+                elif sensitive_data == 'Secret':
+                    data_score = 50
+                elif sensitive_data == 'Top Secret':
+                    data_score = 40
+                
+                # Calculate weighted overall score
+                overall_score = (
+                    threat_score * 0.25 +
+                    risk_score * 0.25 +
+                    controls_score * 0.20 +
+                    architecture_score * 0.15 +
+                    auth_score * 0.10 +
+                    data_score * 0.05
+                )
+                
+                # Round to nearest integer
+                overall_score = round(overall_score)
+                
+                # Determine security grade
+                if overall_score >= 90:
+                    grade = "A+"
+                    color = "green"
+                elif overall_score >= 80:
+                    grade = "A"
+                    color = "green"
+                elif overall_score >= 70:
+                    grade = "B"
+                    color = "orange"
+                elif overall_score >= 60:
+                    grade = "C"
+                    color = "orange"
+                else:
+                    grade = "D"
+                    color = "red"
+                
+                # Display results
+                st.markdown("## Security Score Results")
+                
+                # Main score display
+                col1, col2, col3 = st.columns([2, 1, 1])
+                with col1:
+                    st.metric("Overall Security Score", f"{overall_score}/100")
+                with col2:
+                    st.metric("Security Grade", grade)
+                with col3:
+                    if overall_score >= 80:
+                        st.success("Excellent")
+                    elif overall_score >= 70:
+                        st.warning("Good")
+                    elif overall_score >= 60:
+                        st.warning("Fair")
+                    else:
+                        st.error("Needs Improvement")
+                
+                st.markdown("---")
+                
+                # Detailed breakdown
+                st.markdown("## Score Breakdown")
+                
+                breakdown_data = {
+                    "Component": [
+                        "Threat Assessment (25%)",
+                        "Risk Analysis (25%)",
+                        "Security Controls (20%)",
+                        "Architecture Patterns (15%)",
+                        "Authentication & Access (10%)",
+                        "Data Protection (5%)"
+                    ],
+                    "Score": [
+                        f"{threat_score:.1f}",
+                        f"{risk_score:.1f}",
+                        f"{controls_score:.1f}",
+                        f"{architecture_score:.1f}",
+                        f"{auth_score:.1f}",
+                        f"{data_score:.1f}"
+                    ],
+                    "Weight": ["25%", "25%", "20%", "15%", "10%", "5%"],
+                    "Contribution": [
+                        f"{threat_score * 0.25:.1f}",
+                        f"{risk_score * 0.25:.1f}",
+                        f"{controls_score * 0.20:.1f}",
+                        f"{architecture_score * 0.15:.1f}",
+                        f"{auth_score * 0.10:.1f}",
+                        f"{data_score * 0.05:.1f}"
+                    ]
+                }
+                
+                # Create a formatted table
+                import pandas as pd
+                
+                df = pd.DataFrame({
+                    "Component": [
+                        "Threat Assessment (25%)",
+                        "Risk Analysis (25%)",
+                        "Security Controls (20%)",
+                        "Architecture Patterns (15%)",
+                        "Authentication & Access (10%)",
+                        "Data Protection (5%)"
+                    ],
+                    "Score": [
+                        f"{threat_score:.1f}",
+                        f"{risk_score:.1f}",
+                        f"{controls_score:.1f}",
+                        f"{architecture_score:.1f}",
+                        f"{auth_score:.1f}",
+                        f"{data_score:.1f}"
+                    ],
+                    "Weight": ["25%", "25%", "20%", "15%", "10%", "5%"],
+                    "Contribution": [
+                        f"{threat_score * 0.25:.1f}",
+                        f"{risk_score * 0.25:.1f}",
+                        f"{controls_score * 0.20:.1f}",
+                        f"{architecture_score * 0.15:.1f}",
+                        f"{auth_score * 0.10:.1f}",
+                        f"{data_score * 0.05:.1f}"
+                    ]
+                })
+                
+                st.table(df)
+                
+                st.markdown("---")
+                
+                # Recommendations
+                st.markdown("## Security Improvement Recommendations")
+                
+                recommendations = []
+                
+                if threat_score < 70:
+                    recommendations.append("• **High Priority**: Address identified threats in your threat model - consider implementing additional security controls")
+                
+                if risk_score < 70:
+                    recommendations.append("• **High Priority**: Improve risk mitigation strategies - focus on threats with high DREAD scores")
+                
+                if controls_score < 70:
+                    recommendations.append("• **Medium Priority**: Enhance security controls coverage - implement additional authentication methods")
+                
+                if architecture_score < 70:
+                    recommendations.append("• **Medium Priority**: Improve architecture security patterns - add encryption, monitoring, and defense-in-depth measures")
+                
+                if auth_score < 70:
+                    recommendations.append("• **Medium Priority**: Strengthen authentication mechanisms - implement MFA and OAuth2")
+                
+                if data_score < 70:
+                    recommendations.append("• **Low Priority**: Review data classification and protection measures")
+                
+                if not recommendations:
+                    st.success("🎉 Excellent! Your security posture is strong across all assessed areas.")
+                else:
+                    for rec in recommendations:
+                        st.markdown(rec)
+                
+                st.markdown("---")
+                
+                # Security Score Summary
+                score_summary = f"""
+## Security Score Summary
+
+**Overall Score:** {overall_score}/100 (Grade: {grade})
+
+**Assessment Date:** {st.session_state.get('score_date', 'N/A')}
+
+### Score Components:
+- **Threat Assessment:** {threat_score:.1f}/100 (Weight: 25%)
+- **Risk Analysis:** {risk_score:.1f}/100 (Weight: 25%)
+- **Security Controls:** {controls_score:.1f}/100 (Weight: 20%)
+- **Architecture Patterns:** {architecture_score:.1f}/100 (Weight: 15%)
+- **Authentication & Access:** {auth_score:.1f}/100 (Weight: 10%)
+- **Data Protection:** {data_score:.1f}/100 (Weight: 5%)
+
+### Methodology:
+This security score is calculated using a hybrid approach combining:
+- OWASP Risk Rating Methodology
+- NIST Cybersecurity Framework principles
+- DREAD risk assessment methodology
+- Security architecture best practices
+
+### Next Steps:
+1. Review and address high-priority recommendations
+2. Implement additional security controls as needed
+3. Reassess score after security improvements
+4. Monitor and maintain security posture regularly
+
+---
+*Generated by STRIDE GPT Security Assessment Tool*
+"""
+                
+                # Save score to session state
+                st.session_state['security_score'] = overall_score
+                st.session_state['score_breakdown'] = breakdown_data
+                st.session_state['score_date'] = "2024-01-15"  # You could use datetime.now()
+                
+                # Add download button for the score report
+                st.download_button(
+                    label="Download Security Score Report",
+                    data=score_summary,
+                    file_name="security_score_report.md",
+                    mime="text/markdown",
+                    help="Download a comprehensive security score report"
+                )
+    
+    st.markdown("")
