@@ -8,6 +8,7 @@ from github import Github
 from collections import defaultdict
 import re
 import os
+from datetime import datetime
 from dotenv import load_dotenv
 from openai import OpenAI
 import requests
@@ -36,6 +37,13 @@ from attack_tree import create_attack_tree_prompt, get_attack_tree, get_attack_t
 from mitigations import create_mitigations_prompt, get_mitigations, get_mitigations_azure, get_mitigations_google, get_mitigations_mistral, get_mitigations_ollama, get_mitigations_anthropic, get_mitigations_lm_studio, get_mitigations_groq
 from test_cases import create_test_cases_prompt, get_test_cases, get_test_cases_azure, get_test_cases_google, get_test_cases_mistral, get_test_cases_ollama, get_test_cases_anthropic, get_test_cases_lm_studio, get_test_cases_groq
 from dread import create_dread_assessment_prompt, get_dread_assessment, get_dread_assessment_azure, get_dread_assessment_google, get_dread_assessment_mistral, get_dread_assessment_ollama, get_dread_assessment_anthropic, get_dread_assessment_lm_studio, get_dread_assessment_groq, dread_json_to_markdown
+from mitre_attack import (
+    get_mitre_attack_data, 
+    STRIDEMITREMapper, 
+    display_mitre_enhanced_threats, 
+    export_to_attack_navigator,
+    create_mitre_enhanced_prompt
+)
 
 # ------------------ Helper Functions ------------------ #
 
@@ -616,8 +624,8 @@ if 'app_input' not in st.session_state:
 # Navigation bar
 selected_page = option_menu(
     menu_title=None,  # Required
-    options=["Threat Model", "Attack Tree", "Mitigations", "DREAD", "Test Cases", "Security Score"],
-    icons=["shield-check", "diagram-3", "tools", "speedometer2", "clipboard-check", "star-fill"],
+    options=["Threat Model", "MITRE Analysis", "Attack Tree", "Mitigations", "DREAD", "Test Cases", "Security Score"],
+    icons=["shield-check", "bullseye", "diagram-3", "tools", "speedometer2", "clipboard-check", "star-fill"],
     menu_icon="cast",
     default_index=0,
     orientation="horizontal",
@@ -929,6 +937,226 @@ understanding possible vulnerabilities and attack vectors. Use this tab to gener
             mime="text/markdown",
         )
 
+# ------------------ MITRE ATT&CK Analysis ------------------ #
+
+if selected_page == "MITRE Analysis":
+    st.markdown("""
+This page provides advanced threat modeling by mapping your application threats to real-world attack techniques documented in the 
+MITRE ATT&CK framework. MITRE ATT&CK is a globally-accessible knowledge base of adversary tactics and techniques based on 
+real-world observations of cybersecurity incidents.""")
+    st.markdown("---")
+    
+    mitre_data = get_mitre_attack_data()
+    
+    if not mitre_data:
+        st.error("Unable to load MITRE ATT&CK data. Please check your internet connection and try again.")
+        st.stop()
+    
+    # Check if we have threat model data
+    if 'threat_model' not in st.session_state or not st.session_state['threat_model']:
+        st.warning("No threat model found. Please generate a threat model first using the 'Threat Model' page.")
+        
+        if st.button("Go to Threat Model"):
+            st.session_state.selected_page = "Threat Model"
+            st.rerun()
+        st.stop()
+    
+    # Get application context from session state
+    app_type = st.session_state.get('app_type', 'Web application').lower().replace(' ', '_')
+    
+    # Create MITRE mapper
+    mitre_mapper = STRIDEMITREMapper(mitre_data)
+    
+    # Main MITRE analysis section
+    st.markdown("### MITRE ATT&CK Mapping Analysis")
+    
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        st.markdown("**Configuration:**")
+        
+        # Application type mapping
+        app_type_mapping = {
+            "Web application": "web_application",
+            "Mobile application": "mobile_application", 
+            "Desktop application": "desktop_application",
+            "Cloud application": "web_application",  # Map to web app for now
+            "IoT application": "iot_application",
+            "Other": "web_application"
+        }
+        
+        mapped_app_type = app_type_mapping.get(st.session_state.get('app_type', 'Web application'), 'web_application')
+        
+        # Analysis options
+        include_threat_groups = st.checkbox("Include threat actor group analysis", value=True)
+        include_mitigations = st.checkbox("Include MITRE-based mitigation recommendations", value=True)
+        show_technique_details = st.checkbox("Show detailed technique descriptions", value=False)
+    
+    with col2:
+        # Generate enhanced analysis
+        if st.button("Generate MITRE Analysis", type="primary"):
+            with st.spinner("Mapping threats to MITRE ATT&CK framework..."):
+                
+                # Map STRIDE threats to MITRE techniques
+                enhanced_threats = mitre_mapper.map_stride_to_mitre(
+                    st.session_state['threat_model'], 
+                    mapped_app_type
+                )
+                
+                # Store enhanced threats in session state
+                st.session_state['enhanced_threats'] = enhanced_threats
+                
+                # Generate MITRE-based mitigations if requested
+                if include_mitigations:
+                    all_techniques = []
+                    for threat in enhanced_threats:
+                        all_techniques.extend(threat.get("mitre_techniques", []))
+                    
+                    mitre_mitigations = mitre_mapper.generate_mitre_mitigations(all_techniques)
+                    st.session_state['mitre_mitigations'] = mitre_mitigations
+
+    
+    # Display results if available
+    if 'enhanced_threats' in st.session_state and st.session_state['enhanced_threats']:
+        
+        st.markdown("---")
+        
+        # Display enhanced threats
+        display_mitre_enhanced_threats(st.session_state['enhanced_threats'])
+        
+        # MITRE Statistics Dashboard
+        st.markdown("### MITRE ATT&CK Coverage Dashboard")
+        
+        enhanced_threats = st.session_state['enhanced_threats']
+        
+        # Calculate statistics
+        all_techniques = []
+        all_tactics = []
+        technique_count_by_tactic = {}
+        
+        for threat in enhanced_threats:
+            for technique in threat.get("mitre_techniques", []):
+                all_techniques.append(technique)
+                for tactic in technique.get("tactics", []):
+                    all_tactics.append(tactic)
+                    technique_count_by_tactic[tactic] = technique_count_by_tactic.get(tactic, 0) + 1
+        
+        unique_techniques = list({t['id']: t for t in all_techniques}.values())
+        unique_tactics = list(set(all_tactics))
+        
+        # Statistics grid
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Total Threats", len(enhanced_threats))
+        with col2:
+            st.metric("MITRE Techniques", len(unique_techniques))
+        with col3:
+            st.metric("ATT&CK Tactics", len(unique_tactics))
+        with col4:
+            high_risk_count = sum(1 for threat in enhanced_threats if len(threat.get("mitre_techniques", [])) >= 2)
+            st.metric("High-Risk Threats", high_risk_count)
+        
+        # Tactics coverage chart
+        if technique_count_by_tactic:
+            st.markdown("#### MITRE ATT&CK Tactic Coverage")
+            
+            tactics_df = pd.DataFrame([
+                {"Tactic": tactic.replace("-", " ").title(), "Technique Count": count}
+                for tactic, count in sorted(technique_count_by_tactic.items(), key=lambda x: x[1], reverse=True)
+            ])
+            
+            st.bar_chart(tactics_df.set_index("Tactic"))
+        
+        # Detailed technique list
+        if show_technique_details and unique_techniques:
+            st.markdown("#### Detected MITRE ATT&CK Techniques")
+            
+            technique_details = []
+            for technique in unique_techniques:
+                technique_details.append({
+                    "ID": technique['id'],
+                    "Name": technique['name'],
+                    "Tactics": ", ".join(technique.get('tactics', [])),
+                    "Platforms": ", ".join(technique.get('platforms', [])),
+                    "URL": technique['url']
+                })
+            
+            techniques_df = pd.DataFrame(technique_details)
+            st.dataframe(techniques_df, use_container_width=True)
+        
+        # MITRE mitigations
+        if include_mitigations and 'mitre_mitigations' in st.session_state:
+            st.markdown("#### MITRE-Based Mitigation Recommendations")
+            
+            mitigations = st.session_state['mitre_mitigations']
+            if mitigations:
+                for mitigation in mitigations:
+                    with st.expander(f"**{mitigation['mitigation_id']}** - {mitigation['mitigation_name']}"):
+                        st.markdown(f"**Addresses Technique:** [{mitigation['technique_id']} - {mitigation['technique_name']}]({mitigation.get('technique_url', '#')})")
+                        st.markdown(f"**Description:** {mitigation['mitigation_description']}")
+                        st.markdown(f"**Reference:** [View in MITRE ATT&CK]({mitigation['mitigation_url']})")
+            else:
+                st.info("No specific MITRE mitigations found for the detected techniques.")
+        
+        # Export options
+        st.markdown("#### Export & Integration Options")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            # Export to ATT&CK Navigator
+            navigator_layer = export_to_attack_navigator(enhanced_threats)
+            st.download_button(
+                label="Export to ATT&CK Navigator",
+                data=json.dumps(navigator_layer, indent=2),
+                file_name=f"attack_navigator_layer_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json",
+                help="Download layer file to import into MITRE ATT&CK Navigator for visualization"
+            )
+        
+        with col2:
+            # Export detailed report
+            report_content = f"""# MITRE ATT&CK Enhanced Threat Analysis Report
+
+**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Application Type:** {st.session_state.get('app_type', 'Unknown')}
+**Analysis Framework:** STRIDE + MITRE ATT&CK
+
+## Summary
+- **Total Threats:** {len(enhanced_threats)}
+- **MITRE Techniques:** {len(unique_techniques)}
+- **ATT&CK Tactics:** {len(unique_tactics)}
+
+## Detailed Analysis
+
+"""
+            for i, threat in enumerate(enhanced_threats, 1):
+                report_content += f"""### {i}. {threat['Threat Type']}
+
+**Scenario:** {threat['Scenario']}
+**Impact:** {threat['Potential Impact']}
+
+**MITRE ATT&CK Techniques:**
+"""
+                for technique in threat.get("mitre_techniques", []):
+                    report_content += f"- [{technique['id']} - {technique['name']}]({technique['url']})\n"
+                
+                report_content += "\n"
+            
+            st.download_button(
+                label="Download Full Report",
+                data=report_content,
+                file_name=f"mitre_threat_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                mime="text/markdown"
+            )
+        
+        with col3:
+            # View in ATT&CK Navigator (external link)
+            if st.button("Open ATT&CK Navigator"):
+                st.markdown("[Open MITRE ATT&CK Navigator in new tab](https://mitre-attack.github.io/attack-navigator/)")
+                st.info("Tip: Upload the exported layer file using the 'Open Existing Layer' option in Navigator")
+
 # ------------------ Attack Tree Generation ------------------ #
 
 if selected_page == "Attack Tree":
@@ -938,6 +1166,7 @@ with the ultimate goal of an attacker at the root and various paths to achieve t
 vulnerabilities and prioritising mitigation efforts.
 """)
     st.markdown("""---""")
+    
     if model_provider == "Mistral API" and mistral_model == "mistral-small-latest":
         st.warning("⚠️ Mistral Small doesn't reliably generate syntactically correct Mermaid code. Please use the Mistral Large model for generating attack trees, or select a different model provider.")
     else:
@@ -950,6 +1179,7 @@ vulnerabilities and prioritising mitigation efforts.
         # If the Generate Attack Tree button is clicked and the user has provided an application description
         if attack_tree_submit_button and st.session_state.get('app_input'):
             app_input = st.session_state.get('app_input')
+            
             # Generate the prompt using the create_attack_tree_prompt function
             attack_tree_prompt = create_attack_tree_prompt(app_type, authentication, internet_facing, sensitive_data, app_input)
 
@@ -982,7 +1212,7 @@ vulnerabilities and prioritising mitigation efforts.
                     if ('last_thinking_content' in st.session_state and 
                         st.session_state['last_thinking_content'] and 
                         ((model_provider == "Anthropic API" and "thinking" in anthropic_model.lower()) or
-                         (model_provider == "Google AI API" and "gemini-2.5" in google_model.lower()))):
+                        (model_provider == "Google AI API" and "gemini-2.5" in google_model.lower()))):
                         thinking_model = "Claude" if model_provider == "Anthropic API" else "Gemini"
                         with st.expander(f"View {thinking_model}'s thinking process"):
                             st.markdown(st.session_state['last_thinking_content'])
@@ -1022,7 +1252,7 @@ vulnerabilities and prioritising mitigation efforts.
                     with col5:
                         # Blank placeholder
                         st.write("")
-                    
+                
                 except Exception as e:
                     st.error(f"Error generating attack tree: {e}")
 
