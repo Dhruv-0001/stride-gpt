@@ -10,13 +10,31 @@ from utils import process_groq_response, create_reasoning_system_prompt
 
 # Function to create a prompt to generate mitigating controls
 def create_test_cases_prompt(threats):
+    # Format the threats data properly for the prompt
+    if isinstance(threats, list):
+        # Raw threat model data - format as structured text
+        formatted_threats = "IDENTIFIED THREATS:\n\n"
+        for i, threat in enumerate(threats, 1):
+            threat_id = threat.get('Threat ID', f'STR-{i:03d}')
+            formatted_threats += f"Threat {i}: {threat_id}\n"
+            formatted_threats += f"- Threat Type: {threat.get('Threat Type', 'N/A')}\n"
+            formatted_threats += f"- Component: {threat.get('Component', 'Not Specified')}\n"
+            formatted_threats += f"- Scenario: {threat.get('Scenario', 'N/A')}\n"
+            formatted_threats += f"- Potential Impact: {threat.get('Potential Impact', 'N/A')}\n\n"
+    else:
+        # Fallback for markdown or other formats
+        formatted_threats = str(threats)
+    
     prompt = f"""
 Act as a cyber security expert with more than 20 years experience of using the STRIDE threat modelling methodology. 
 Your task is to provide Gherkin test cases for the threats identified in a threat model. It is very important that 
 your responses are tailored to reflect the details of the threats. 
 
+Each test case should reference the specific Threat ID and Component from the threat model for better traceability.
+
 Below is the list of identified threats:
-{threats}
+
+{formatted_threats}
 
 Use the threat descriptions in the 'Given' steps so that the test cases are specific to the threats identified.
 Put the Gherkin syntax inside triple backticks (```) to format the test cases in Markdown. Add a title for each test case.

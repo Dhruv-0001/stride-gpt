@@ -15,13 +15,19 @@ from utils import process_groq_response, create_reasoning_system_prompt
 def json_to_markdown(threat_model, improvement_suggestions):
     markdown_output = "## Threat Model\n\n"
     
-    # Start the markdown table with headers
-    markdown_output += "| Threat Type | Scenario | Potential Impact |\n"
-    markdown_output += "|-------------|----------|------------------|\n"
+    # Start the markdown table with headers including Threat ID and Component
+    markdown_output += "| Threat ID | Threat Type | Component | Scenario | Potential Impact |\n"
+    markdown_output += "|-----------|-------------|-----------|----------|------------------|\n"
     
-    # Fill the table rows with the threat model data
-    for threat in threat_model:
-        markdown_output += f"| {threat['Threat Type']} | {threat['Scenario']} | {threat['Potential Impact']} |\n"
+    # Fill the table rows with the threat model data, adding threat IDs
+    for i, threat in enumerate(threat_model, 1):
+        threat_id = f"STR-{i:03d}"  # Generate ID like STR-001, STR-002, etc.
+        component = threat.get('Component', 'Not Specified')  # Default if not provided
+        
+        # Add the threat ID to the threat data for later use
+        threat['Threat ID'] = threat_id
+        
+        markdown_output += f"| {threat_id} | {threat['Threat Type']} | {component} | {threat['Scenario']} | {threat['Potential Impact']} |\n"
     
     markdown_output += "\n\n## Improvement Suggestions\n\n"
     for suggestion in improvement_suggestions:
@@ -38,7 +44,7 @@ Pay special attention to the README content as it often provides valuable contex
 
 For each of the STRIDE categories (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, and Elevation of Privilege), list multiple (3 or 4) credible threats if applicable. Each threat scenario should provide a credible scenario in which the threat could occur in the context of the application. It is very important that your responses are tailored to reflect the details you are given.
 
-When providing the threat model, use a JSON formatted response with the keys "threat_model" and "improvement_suggestions". Under "threat_model", include an array of objects with the keys "Threat Type", "Scenario", and "Potential Impact". 
+When providing the threat model, use a JSON formatted response with the keys "threat_model" and "improvement_suggestions". Under "threat_model", include an array of objects with the keys "Threat Type", "Component", "Scenario", and "Potential Impact". The "Component" should identify the specific system component, service, or module that the threat targets (e.g., "Authentication Service", "Session Manager", "Database Layer", "API Gateway", "User Interface", etc.). 
 
 Under "improvement_suggestions", include an array of strings that suggest what additional information or details the user could provide to make the threat model more comprehensive and accurate in the next iteration. Focus on identifying gaps in the provided application description that, if filled, would enable a more detailed and precise threat analysis. For example:
 - Missing architectural details that would help identify more specific threats
@@ -63,11 +69,13 @@ Example of expected JSON response format:
       "threat_model": [
         {{
           "Threat Type": "Spoofing",
+          "Component": "Authentication Service",
           "Scenario": "Example Scenario 1",
           "Potential Impact": "Example Potential Impact 1"
         }},
         {{
-          "Threat Type": "Spoofing",
+          "Threat Type": "Spoofing", 
+          "Component": "Session Manager",
           "Scenario": "Example Scenario 2",
           "Potential Impact": "Example Potential Impact 2"
         }},

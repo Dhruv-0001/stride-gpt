@@ -12,9 +12,11 @@ from groq import Groq
 from utils import process_groq_response, create_reasoning_system_prompt
 
 def dread_json_to_markdown(dread_assessment):
-    # Create a clean Markdown table with proper spacing
-    markdown_output = "| Threat Type | Scenario | Damage Potential | Reproducibility | Exploitability | Affected Users | Discoverability | Risk Score |\n"
-    markdown_output += "|------------|----------|------------------|-----------------|----------------|----------------|-----------------|------------|\n"
+    # Create a clean Markdown table with proper spacing including Threat ID and Component
+    # Add note about sorting
+    markdown_output = "_**Note:** Threats are sorted by Risk Score from highest to lowest for prioritization._\n\n"
+    markdown_output += "| Threat ID | Threat Type | Component | Scenario | Damage Potential | Reproducibility | Exploitability | Affected Users | Discoverability | Risk Score |\n"
+    markdown_output += "|-----------|-------------|-----------|----------|------------------|-----------------|----------------|----------------|-----------------|------------|\n"
     
     try:
         # Access the list of threats under the "Risk Assessment" key
@@ -22,14 +24,19 @@ def dread_json_to_markdown(dread_assessment):
         
         # If there are no threats, add a message row
         if not threats:
-            markdown_output += "| No threats found | Please generate a threat model first | - | - | - | - | - | - |\n"
+            markdown_output += "| - | No threats found | - | Please generate a threat model first | - | - | - | - | - | - |\n"
             return markdown_output
-            
-        for threat in threats:
-            # Check if threat is a dictionary
+        
+        # Process and calculate risk scores for all threats
+        processed_threats = []
+        invalid_threats = []
+        
+        for i, threat in enumerate(threats, 1):
             if isinstance(threat, dict):
                 # Get values with defaults
+                threat_id = threat.get('Threat ID', f'STR-{i:03d}')
                 threat_type = threat.get('Threat Type', 'N/A')
+                component = threat.get('Component', 'Not Specified')
                 scenario = threat.get('Scenario', 'N/A')
                 damage_potential = threat.get('Damage Potential', 0)
                 reproducibility = threat.get('Reproducibility', 0)
@@ -40,20 +47,46 @@ def dread_json_to_markdown(dread_assessment):
                 # Calculate the Risk Score
                 risk_score = (damage_potential + reproducibility + exploitability + affected_users + discoverability) / 5
                 
-                # Escape any pipe characters in text fields to prevent table formatting issues
-                threat_type = str(threat_type).replace('|', '\\|')
-                scenario = str(scenario).replace('|', '\\|')
-                
-                # Ensure scenario text doesn't break table formatting by limiting length and removing newlines
-                if len(scenario) > 100:
-                    scenario = scenario[:97] + "..."
-                scenario = scenario.replace('\n', ' ').replace('\r', '')
-                
-                # Add the row to the table with proper formatting
-                markdown_output += f"| {threat_type} | {scenario} | {damage_potential} | {reproducibility} | {exploitability} | {affected_users} | {discoverability} | {risk_score:.2f} |\n"
+                # Store the processed threat with calculated risk score
+                processed_threats.append({
+                    'threat_id': threat_id,
+                    'threat_type': threat_type,
+                    'component': component,
+                    'scenario': scenario,
+                    'damage_potential': damage_potential,
+                    'reproducibility': reproducibility,
+                    'exploitability': exploitability,
+                    'affected_users': affected_users,
+                    'discoverability': discoverability,
+                    'risk_score': risk_score,
+                    'original_index': i
+                })
             else:
-                # Skip non-dictionary entries and log a warning
-                markdown_output += "| Invalid threat | Threat data is not in the correct format | - | - | - | - | - | - |\n"
+                # Store invalid threats for later processing
+                invalid_threats.append((i, threat))
+        
+        # Sort threats by risk score (highest to lowest)
+        processed_threats.sort(key=lambda x: x['risk_score'], reverse=True)
+        
+        # Generate table rows for sorted threats
+        for threat in processed_threats:
+            # Escape any pipe characters in text fields to prevent table formatting issues
+            threat_id = str(threat['threat_id']).replace('|', '\\|')
+            threat_type = str(threat['threat_type']).replace('|', '\\|')
+            component = str(threat['component']).replace('|', '\\|')
+            scenario = str(threat['scenario']).replace('|', '\\|')
+            
+            # Ensure scenario text doesn't break table formatting by limiting length and removing newlines
+            if len(scenario) > 80:  # Reduced from 100 to account for new columns
+                scenario = scenario[:77] + "..."
+            scenario = scenario.replace('\n', ' ').replace('\r', '')
+            
+            # Add the row to the table with proper formatting
+            markdown_output += f"| {threat_id} | {threat_type} | {component} | {scenario} | {threat['damage_potential']} | {threat['reproducibility']} | {threat['exploitability']} | {threat['affected_users']} | {threat['discoverability']} | {threat['risk_score']:.2f} |\n"
+        
+        # Add invalid threats at the end
+        for i, threat in invalid_threats:
+            markdown_output += f"| STR-{i:03d} | Invalid threat | - | Threat data is not in the correct format | - | - | - | - | - | - |\n"
     except Exception as e:
         # Add a note about the error and a placeholder row
         markdown_output += "| Error | An error occurred while processing the DREAD assessment | - | - | - | - | - | - |\n"
@@ -65,19 +98,39 @@ def dread_json_to_markdown(dread_assessment):
 
 # Function to create a prompt to generate mitigating controls
 def create_dread_assessment_prompt(threats):
+    # Format the threats data properly for the prompt
+    if isinstance(threats, list):
+        # Raw threat model data - format as structured text
+        formatted_threats = "IDENTIFIED THREATS:\n\n"
+        for i, threat in enumerate(threats, 1):
+            threat_id = threat.get('Threat ID', f'STR-{i:03d}')
+            formatted_threats += f"Threat {i}: {threat_id}\n"
+            formatted_threats += f"- Threat Type: {threat.get('Threat Type', 'N/A')}\n"
+            formatted_threats += f"- Component: {threat.get('Component', 'Not Specified')}\n"
+            formatted_threats += f"- Scenario: {threat.get('Scenario', 'N/A')}\n"
+            formatted_threats += f"- Potential Impact: {threat.get('Potential Impact', 'N/A')}\n\n"
+    else:
+        # Fallback for markdown or other formats
+        formatted_threats = str(threats)
+    
     prompt = f"""
 Act as a cyber security expert with more than 20 years of experience in threat modeling using STRIDE and DREAD methodologies.
 Your task is to produce a DREAD risk assessment for the threats identified in a threat model.
 Below is the list of identified threats:
-{threats}
+
+{formatted_threats}
 When providing the risk assessment, use a JSON formatted response with a top-level key "Risk Assessment" and a list of threats, each with the following sub-keys:
 - "Threat Type": A string representing the type of threat (e.g., "Spoofing").
+- "Component": A string identifying the system component affected - use EXACTLY the same component name provided in the input threats.
 - "Scenario": A string describing the threat scenario.
 - "Damage Potential": An integer between 1 and 10.
 - "Reproducibility": An integer between 1 and 10.
 - "Exploitability": An integer between 1 and 10.
 - "Affected Users": An integer between 1 and 10.
 - "Discoverability": An integer between 1 and 10.
+
+IMPORTANT: Preserve the Component field EXACTLY as provided in the input threats. Do not modify or change the component names.
+
 Assign a value between 1 and 10 for each sub-key based on the DREAD methodology. Use the following scale:
 - 1-3: Low
 - 4-6: Medium
@@ -87,6 +140,7 @@ Ensure the JSON response is correctly formatted and does not contain any additio
   "Risk Assessment": [
     {{
       "Threat Type": "Spoofing",
+      "Component": "Authentication Service",
       "Scenario": "An attacker could create a fake OAuth2 provider and trick users into logging in through it.",
       "Damage Potential": 8,
       "Reproducibility": 6,
@@ -96,6 +150,7 @@ Ensure the JSON response is correctly formatted and does not contain any additio
     }},
     {{
       "Threat Type": "Spoofing",
+      "Component": "Session Manager",
       "Scenario": "An attacker could intercept the OAuth2 token exchange process through a Man-in-the-Middle (MitM) attack.",
       "Damage Potential": 8,
       "Reproducibility": 7,

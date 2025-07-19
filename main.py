@@ -1132,8 +1132,12 @@ real-world observations of cybersecurity incidents.""")
 
 """
             for i, threat in enumerate(enhanced_threats, 1):
-                report_content += f"""### {i}. {threat['Threat Type']}
+                threat_id = threat.get('Threat ID', f'STR-{i:03d}')
+                component = threat.get('Component', 'Not Specified')
+                
+                report_content += f"""### {threat_id} - {threat['Threat Type']}
 
+**Component:** {component}
 **Scenario:** {threat['Scenario']}
 **Impact:** {threat['Potential Impact']}
 
@@ -1225,25 +1229,82 @@ vulnerabilities and prioritising mitigation efforts.
                     st.write("Attack Tree Diagram Preview:")
                     mermaid(mermaid_code)
                     
+                    # Add download and export options
+                    st.markdown("### Download & Export Options")
+                    st.caption("Export your attack tree in different formats for documentation, presentations, or further analysis.")
+                    
                     col1, col2, col3, col4, col5 = st.columns([1,1,1,1,1])
                     
                     with col1:              
                         # Add a button to allow the user to download the Mermaid code
                         st.download_button(
-                            label="Download Diagram Code",
+                            label="Download Code",
                             data=mermaid_code,
                             file_name="attack_tree.md",
                             mime="text/plain",
-                            help="Download the Mermaid code for the attack tree diagram."
+                            help="Download the Mermaid code for editing or version control"
                         )
 
                     with col2:
-                        # Add a button to allow the user to open the Mermaid Live editor
-                        mermaid_live_button = st.link_button("Open Mermaid Live", "https://mermaid.live")
-                    
+                        # Add a button to download the attack tree as an image
+                        def generate_mermaid_image(mermaid_syntax):
+                            """Generate PNG image from Mermaid syntax using mermaid.ink service"""
+                            import base64
+                            
+                            try:
+                                # Clean and encode the Mermaid syntax for URL
+                                # Remove any extra whitespace and ensure proper encoding
+                                clean_syntax = mermaid_syntax.strip()
+                                encoded_syntax = base64.b64encode(clean_syntax.encode('utf-8')).decode('utf-8')
+                                
+                                # Use mermaid.ink service to generate image
+                                image_url = f"https://mermaid.ink/img/{encoded_syntax}"
+                                
+                                # Fetch the image with proper headers
+                                headers = {
+                                    'User-Agent': 'STRIDE-GPT/1.0 (Attack Tree Generator)',
+                                    'Accept': 'image/png,image/*,*/*'
+                                }
+                                response = requests.get(image_url, timeout=30, headers=headers)
+                                
+                                if response.status_code == 200:
+                                    # Verify we got image content
+                                    if response.headers.get('content-type', '').startswith('image/'):
+                                        return response.content
+                                    else:
+                                        return None
+                                else:
+                                    return None
+                            except Exception as e:
+                                # Don't display error in UI here, handle it in the calling code
+                                return None
+
+                        # Store the mermaid code in session state for image generation
+                        st.session_state['current_mermaid_code'] = mermaid_code
+                        
+                        # Generate image data in the background
+                        try:
+                            image_data = generate_mermaid_image(mermaid_code)
+                            if image_data:
+                                st.download_button(
+                                    label="Download Image",
+                                    data=image_data,
+                                    file_name=f"attack_tree_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
+                                    mime="image/png",
+                                    help="Download as PNG image for presentations and documentation",
+                                    key="attack_tree_image_download"
+                                )
+                            else:
+                                st.button("Image Failed", disabled=True, 
+                                         help="Image generation failed. Try the Mermaid Live editor instead.")
+                        except Exception as e:
+                            st.button("Service Offline", disabled=True, 
+                                     help=f"Image service unavailable. Use Mermaid Live editor for images.")
+
                     with col3:
-                        # Blank placeholder
-                        st.write("")
+                        # Add a button to allow the user to open the Mermaid Live editor
+                        st.link_button("Mermaid Live", "https://mermaid.live", 
+                                     help="Open in Mermaid Live editor for advanced editing and export options")
                     
                     with col4:
                         # Blank placeholder
@@ -1252,6 +1313,9 @@ vulnerabilities and prioritising mitigation efforts.
                     with col5:
                         # Blank placeholder
                         st.write("")
+                    
+                    # Add informational note about image generation
+                    st.caption("_Images are generated using the Mermaid.ink service. If image download fails, use Mermaid Live for manual export._")
                 
                 except Exception as e:
                     st.error(f"Error generating attack tree: {e}")
@@ -1261,9 +1325,11 @@ vulnerabilities and prioritising mitigation efforts.
 
 if selected_page == "Mitigations":
     st.markdown("""
-Use this tab to generate potential mitigations for the threats identified in the threat model. Mitigations are security controls or
-countermeasures that can help reduce the likelihood or impact of a security threat. The generated mitigations can be used to enhance
-the security posture of the application and protect against potential attacks.
+## Mitigations
+
+Generate comprehensive, actionable mitigations for identified threats with enterprise-grade recommendations including: MITRE ATT&CK Integration, NIST Cybersecurity Framework, Implementation Metadata and Cross-Platform Compatibility. 
+
+**Pro Tip**: For enhanced MITRE mappings, generate MITRE Analysis first. For risk prioritization, complete DREAD Assessment.
 """)
     st.markdown("""---""")
     
@@ -1274,10 +1340,55 @@ the security posture of the application and protect against potential attacks.
     if mitigations_submit_button:
         # Check if threat_model data exists
         if 'threat_model' in st.session_state and st.session_state['threat_model']:
-            # Convert the threat_model data into a Markdown list
-            threats_markdown = json_to_markdown(st.session_state['threat_model'], [])
+            # Use enhanced threat data if available (from MITRE analysis), otherwise use basic threat model
+            enhancement_status = []
+            
+            if 'enhanced_threats' in st.session_state and st.session_state['enhanced_threats']:
+                threat_model_data = st.session_state['enhanced_threats']
+                enhancement_status.append("MITRE ATT&CK techniques")
+            else:
+                threat_model_data = st.session_state['threat_model']
+                enhancement_status.append("Basic threat model (generate MITRE Analysis for enhanced mappings)")
+            
+            # Check for DREAD data
+            has_dread = 'dread_assessment' in st.session_state and st.session_state['dread_assessment']
+            if has_dread:
+                enhancement_status.append("DREAD risk scores")
+            else:
+                enhancement_status.append("No risk scores (generate DREAD Assessment for prioritization)")
+            
+            # Display enhancement status
+            with st.expander("Mitigation Enhancement Status", expanded=False):
+                st.markdown("**Data sources being used for enhanced mitigations:**")
+                for status in enhancement_status:
+                    st.markdown(f"- {status}")
+                st.markdown("\n**Features included:**")
+                st.markdown("- MITRE ATT&CK Mitigation IDs with clickable links")
+                st.markdown("- NIST Cybersecurity Framework references") 
+                st.markdown("- Implementation difficulty, timeline, and cost estimates")
+                st.markdown("- Specific implementation guidance and tool recommendations")
+            
+            # Enhance with DREAD scores if available
+            if has_dread:
+                dread_data = st.session_state['dread_assessment'].get('Risk Assessment', [])
+                # Merge DREAD scores into threat data
+                for i, threat in enumerate(threat_model_data):
+                    if i < len(dread_data) and isinstance(dread_data[i], dict):
+                        # Calculate risk score
+                        dread_threat = dread_data[i]
+                        risk_components = [
+                            dread_threat.get('Damage Potential', 0),
+                            dread_threat.get('Reproducibility', 0),
+                            dread_threat.get('Exploitability', 0),
+                            dread_threat.get('Affected Users', 0),
+                            dread_threat.get('Discoverability', 0)
+                        ]
+                        if any(risk_components):  # Only add if we have actual DREAD data
+                            risk_score = sum(risk_components) / 5
+                            threat['Risk Score'] = round(risk_score, 2)
+            
             # Generate the prompt using the create_mitigations_prompt function
-            mitigations_prompt = create_mitigations_prompt(threats_markdown)
+            mitigations_prompt = create_mitigations_prompt(threat_model_data)
 
             # Clear thinking content when switching models or starting a new operation
             if model_provider != "Anthropic API" or "thinking" not in anthropic_model.lower():
@@ -1316,17 +1427,47 @@ the security posture of the application and protect against potential attacks.
                             with st.expander(f"View {thinking_model}'s thinking process"):
                                 st.markdown(st.session_state['last_thinking_content'])
 
-                        # Display the suggested mitigations in Markdown
-                        st.markdown(mitigations_markdown)
+                        # Process MITRE mitigation IDs to create clickable links and clean up formatting
+                        def enhance_mitre_links(markdown_text):
+                            import re
+                            # Pattern to match MITRE mitigation IDs (M1001-M1057)
+                            pattern = r'\b(M10[0-5][0-9])\b'
+                            
+                            def replace_mitre_id(match):
+                                mitre_id = match.group(1)
+                                url = f"https://attack.mitre.org/mitigations/{mitre_id}/"
+                                return f"[{mitre_id}]({url})"
+                            
+                            return re.sub(pattern, replace_mitre_id, markdown_text)
+                        
+                        def clean_html_tags(markdown_text):
+                            import re
+                            # Remove <br/> and <br> tags and replace with proper formatting
+                            # Replace <br/> with semicolon + space when within table cells
+                            cleaned_text = re.sub(r'<br\s*/?>\s*', '; ', markdown_text)
+                            # Clean up any double semicolons or trailing semicolons
+                            cleaned_text = re.sub(r';\s*;', ';', cleaned_text)
+                            cleaned_text = re.sub(r';\s*$', '', cleaned_text, flags=re.MULTILINE)
+                            # Clean up leading semicolons
+                            cleaned_text = re.sub(r'^\s*;\s*', '', cleaned_text, flags=re.MULTILINE)
+                            return cleaned_text
+                        
+                        # Clean HTML tags and enhance the mitigations with clickable MITRE links
+                        cleaned_mitigations = clean_html_tags(mitigations_markdown)
+                        enhanced_mitigations = enhance_mitre_links(cleaned_mitigations)
+                        
+                        # Display the enhanced mitigations in Markdown
+                        st.markdown(enhanced_mitigations)
                         
                         st.markdown("")
                         
-                        # Add a button to allow the user to download the mitigations as a Markdown file
+                        # Add a button to allow the user to download the enhanced mitigations as a Markdown file
                         st.download_button(
-                            label="Download Mitigations",
-                            data=mitigations_markdown,
-                            file_name="mitigations.md",
+                            label="Download Enhanced Mitigations",
+                            data=enhanced_mitigations,
+                            file_name="enhanced_mitigations.md",
                             mime="text/markdown",
+                            help="Download mitigations with clickable MITRE ATT&CK links and comprehensive implementation guidance"
                         )
                         
                         break  # Exit the loop if successful
@@ -1357,10 +1498,10 @@ focusing on the most critical threats first. Use this tab to perform a DREAD ris
     if dread_assessment_submit_button:
         # Check if threat_model data exists
         if 'threat_model' in st.session_state and st.session_state['threat_model']:
-            # Convert the threat_model data into a Markdown list
-            threats_markdown = json_to_markdown(st.session_state['threat_model'], [])
+            # Pass the raw threat model data to preserve all fields including Component
+            threat_model_data = st.session_state['threat_model']
             # Generate the prompt using the create_dread_assessment_prompt function
-            dread_assessment_prompt = create_dread_assessment_prompt(threats_markdown)
+            dread_assessment_prompt = create_dread_assessment_prompt(threat_model_data)
             # Clear thinking content when switching models or starting a new operation
             if model_provider != "Anthropic API" or "thinking" not in anthropic_model.lower():
                 st.session_state.pop('last_thinking_content', None)
@@ -1419,7 +1560,7 @@ focusing on the most critical threats first. Use this tab to perform a DREAD ris
                     
             # Display the DREAD assessment with a header
             st.markdown("## DREAD Risk Assessment")
-            st.markdown("The table below shows the DREAD risk assessment for each identified threat. The Risk Score is calculated as the average of the five DREAD categories.")
+            st.markdown("The table below shows the DREAD risk assessment for each identified threat, sorted by Risk Score from highest to lowest for prioritization. The Risk Score is calculated as the average of the five DREAD categories.")
             
             # Display the DREAD assessment in Markdown format
             st.markdown(dread_assessment_markdown, unsafe_allow_html=False)
@@ -1453,10 +1594,10 @@ scenarios.
     if test_cases_submit_button:
         # Check if threat_model data exists
         if 'threat_model' in st.session_state and st.session_state['threat_model']:
-            # Convert the threat_model data into a Markdown list
-            threats_markdown = json_to_markdown(st.session_state['threat_model'], [])
+            # Pass the raw threat model data to preserve all fields including Threat ID and Component
+            threat_model_data = st.session_state['threat_model']
             # Generate the prompt using the create_test_cases_prompt function
-            test_cases_prompt = create_test_cases_prompt(threats_markdown)
+            test_cases_prompt = create_test_cases_prompt(threat_model_data)
 
             # Clear thinking content when switching models or starting a new operation
             if model_provider != "Anthropic API" or "thinking" not in anthropic_model.lower():
@@ -1830,7 +1971,7 @@ Security Score provides a comprehensive assessment of your application's securit
                     recommendations.append("• **Low Priority**: Review data classification and protection measures")
                 
                 if not recommendations:
-                    st.success("🎉 Excellent! Your security posture is strong across all assessed areas.")
+                    st.success("Excellent! Your security posture is strong across all assessed areas.")
                 else:
                     for rec in recommendations:
                         st.markdown(rec)

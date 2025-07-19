@@ -10,16 +10,107 @@ from utils import process_groq_response, create_reasoning_system_prompt
 
 # Function to create a prompt to generate mitigating controls
 def create_mitigations_prompt(threats):
+    # Format the threats data properly for the prompt
+    if isinstance(threats, list):
+        # Raw threat model data - format as structured text with enhanced information
+        formatted_threats = "IDENTIFIED THREATS WITH MITRE CONTEXT:\n\n"
+        for i, threat in enumerate(threats, 1):
+            threat_id = threat.get('Threat ID', f'STR-{i:03d}')
+            formatted_threats += f"Threat {i}: {threat_id}\n"
+            formatted_threats += f"- Threat Type: {threat.get('Threat Type', 'N/A')}\n"
+            formatted_threats += f"- Component: {threat.get('Component', 'Not Specified')}\n"
+            formatted_threats += f"- Scenario: {threat.get('Scenario', 'N/A')}\n"
+            formatted_threats += f"- Potential Impact: {threat.get('Potential Impact', 'N/A')}\n"
+            
+            # Add MITRE information if available (from enhanced threats)
+            if 'mitre_techniques' in threat and threat['mitre_techniques']:
+                formatted_threats += f"- MITRE ATT&CK Techniques: "
+                technique_list = []
+                for technique in threat['mitre_techniques']:
+                    technique_list.append(f"{technique.get('id', 'Unknown')} ({technique.get('name', 'Unknown')})")
+                formatted_threats += ", ".join(technique_list) + "\n"
+            
+            if 'mitre_tactics' in threat and threat['mitre_tactics']:
+                formatted_threats += f"- MITRE Tactics: {', '.join(threat['mitre_tactics'])}\n"
+            
+            # Add DREAD score if available for prioritization
+            if 'Risk Score' in threat:
+                formatted_threats += f"- DREAD Risk Score: {threat['Risk Score']}\n"
+            
+            formatted_threats += "\n"
+    else:
+        # Fallback for markdown or other formats
+        formatted_threats = str(threats)
+
     prompt = f"""
-Act as a cyber security expert with more than 20 years experience of using the STRIDE threat modelling methodology. Your task is to provide potential mitigations for the threats identified in the threat model. It is very important that your responses are tailored to reflect the details of the threats.
+Act as a cyber security expert with more than 20 years experience of using the STRIDE threat modelling methodology, MITRE ATT&CK framework, NIST Cybersecurity Framework, and CIS Controls. Your task is to provide comprehensive, actionable mitigations for the threats identified in the threat model.
 
 Your output should be in the form of a markdown table with the following columns:
-    - Column A: Threat Type
-    - Column B: Scenario
-    - Column C: Suggested Mitigation(s)
+    - Column A: Threat ID
+    - Column B: Threat Type  
+    - Column C: Component
+    - Column D: Mitigation Category (Technical/Administrative/Physical)
+    - Column E: Suggested Mitigation(s)
+    - Column F: MITRE Mitigation ID (if applicable, e.g., M1032)
+    - Column G: NIST CSF Reference (e.g., PR.AC-1, DE.CM-1)
+    - Column H: Implementation Details
+    - Column I: Difficulty (Easy/Medium/Hard)
+    - Column J: Timeline (Days/Weeks/Months)
+    - Column K: Cost (Low/Medium/High)
+
+MITIGATION REQUIREMENTS:
+- Map each threat to relevant MITRE ATT&CK mitigations where possible (M1001-M1057)
+- Include NIST Cybersecurity Framework subcategories (PR.*, DE.*, RS.*, etc.)
+- Categorize as Technical (firewalls, encryption), Administrative (policies, training), or Physical (facility security)
+- Provide specific, actionable implementation guidance
+- Include tool/vendor recommendations where appropriate
+
+COMMON MITRE ATT&CK MITIGATIONS FOR REFERENCE:
+- M1032: Multi-factor Authentication - For authentication-related threats
+- M1050: Exploit Protection - For application vulnerabilities
+- M1018: User Account Management - For access control issues
+- M1027: Password Policies - For credential-based threats
+- M1038: Execution Prevention - For code execution threats
+- M1031: Network Intrusion Prevention - For network-based attacks
+- M1030: Network Segmentation - For lateral movement threats
+- M1028: Operating System Configuration - For system-level threats
+- M1049: Antivirus/Antimalware - For malware threats
+- M1017: User Training - For social engineering threats
+
+COMMON NIST CSF SUBCATEGORIES:
+- PR.AC-1: Access Control Management
+- PR.AC-4: Access Control for Networks
+- PR.AT-1: Security Awareness Training
+- PR.DS-1: Data Security - Data at rest
+- PR.DS-2: Data Security - Data in transit
+- DE.CM-1: Continuous Monitoring
+- DE.CM-7: Continuous Monitoring for Personnel Activity
+- RS.RP-1: Response Planning
+
+FORMATTING REQUIREMENTS:
+- Use proper markdown table format
+- For multi-point mitigations in the "Suggested Mitigation(s)" column, separate each point with semicolons and ensure each point starts with a dash
+- Format should be: "- First point; - Second point; - Third point"
+- Keep the content clean and readable
+- Preserve the Threat ID and Component information EXACTLY as provided
+- Do NOT use HTML tags like <br/> as they will not render properly in the table
 
 Below is the list of identified threats:
-{threats}
+
+{formatted_threats}
+
+EXAMPLE OUTPUT FORMAT:
+| Threat ID | Threat Type | Component | Category | Suggested Mitigation(s) | MITRE ID | NIST CSF | Implementation Details | Difficulty | Timeline | Cost |
+|-----------|-------------|-----------|----------|-------------------------|----------|----------|------------------------|------------|----------|------|
+| STR-001 | Spoofing | Authentication Service | Technical | - Implement strong authentication protocols; - Use multi-factor authentication; - Regular security training for users | M1032 | PR.AC-1 | Deploy Azure AD MFA, configure SAML 2.0, train users on enrollment | Medium | 2-4 Weeks | Medium |
+
+IMPORTANT GUIDANCE:
+- In the "Suggested Mitigation(s)" column, separate each mitigation point with semicolons (;)
+- Each point should start with a dash (-) for consistency: "- First point; - Second point"
+- For MITRE Mitigation ID: Use official MITRE mitigation IDs when the threat maps to known ATT&CK techniques (separate multiple IDs with semicolons)
+- For NIST CSF Reference: Use appropriate subcategories (PR.AC for Access Control, DE.CM for Continuous Monitoring, etc.) (separate multiple references with semicolons)
+- For Implementation Details: Be specific about tools, configurations, and steps
+- For Timeline: Consider complexity and organizational readiness
 
 YOUR RESPONSE (do not wrap in a code block):
 """

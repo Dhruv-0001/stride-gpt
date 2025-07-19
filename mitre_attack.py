@@ -327,11 +327,16 @@ def display_mitre_enhanced_threats(enhanced_threats: List[Dict]) -> None:
     st.markdown("## Enhanced Threat Model with MITRE ATT&CK Mapping")
     
     for i, threat in enumerate(enhanced_threats, 1):
-        with st.expander(f"**{threat['Threat Type']}** - {threat['Scenario'][:50]}..."):
+        threat_id = threat.get('Threat ID', f'STR-{i:03d}')
+        component = threat.get('Component', 'Not Specified')
+        
+        with st.expander(f"**{threat_id}** - {threat['Threat Type']} - {threat['Scenario'][:40]}..."):
             
             col1, col2 = st.columns([2, 1])
             
             with col1:
+                st.markdown(f"**Threat ID:** {threat_id}")
+                st.markdown(f"**Component:** {component}")
                 st.markdown(f"**Scenario:** {threat['Scenario']}")
                 st.markdown(f"**Potential Impact:** {threat['Potential Impact']}")
                 
